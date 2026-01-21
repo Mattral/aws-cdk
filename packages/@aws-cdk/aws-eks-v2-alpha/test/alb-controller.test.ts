@@ -4,7 +4,7 @@ import { KubectlV31Layer } from '@aws-cdk/lambda-layer-kubectl-v31';
 import { Template } from 'aws-cdk-lib/assertions';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { testFixture } from './util';
-import { Cluster, KubernetesVersion, AlbController, AlbControllerVersion, HelmChart } from '../lib';
+import { Cluster, KubernetesVersion, AlbController, AlbControllerVersion, HelmChart, KubernetesManifest } from '../lib';
 
 const versions = Object.values(AlbControllerVersion);
 
@@ -164,5 +164,28 @@ test('correct helm chart version is set for selected alb controller version', ()
         ],
       ],
     },
+  });
+});
+
+test('should pass overwriteServiceAccount to service account', () => {
+  // GIVEN
+  const { stack } = testFixture();
+  const cluster = new Cluster(stack, 'Cluster', {
+    version: KubernetesVersion.V1_27,
+    kubectlProviderOptions: {
+      kubectlLayer: new KubectlV31Layer(stack, 'kubectlLayer'),
+    },
+  });
+
+  // WHEN
+  AlbController.create(stack, {
+    cluster,
+    version: AlbControllerVersion.V2_6_2,
+    overwriteServiceAccount: true,
+  });
+
+  // THEN
+  Template.fromStack(stack).hasResourceProperties(KubernetesManifest.RESOURCE_TYPE, {
+    Overwrite: true,
   });
 });
